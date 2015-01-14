@@ -1,18 +1,14 @@
 set -e
+source ~/.profile
 
-PKG_OK=$(dpkg-query -W --showformat='${Status}\n' zbackup|grep "install ok installed")
-export RBENV_ROOT=/home/ubuntu/.rbenv
-export PATH=$RBENV_ROOT/bin:$PATH
 
-eval "$(rbenv init -)"
-
-if [ "" == "$PKG_OK" ]; then
-  echo "No zbackup. Setting up zbackup."
-  sudo apt-get update
-  sudo apt-get --force-yes --yes install zbackup
+if [ ! -z "$1" ]; then
+	targetPath="$1"
+else
+	targetPath="."	
 fi
 
-BACKUPDIR="/mnt/backup"
+BACKUPDIR=$targetPath
 
 if [ ! -d "$BACKUPDIR" ]; then
 	echo "Backup directory doesn't exist"
@@ -27,14 +23,9 @@ fi
 cd /var/www/faims
 rake modules:archive
 
-if [ ! -z "$1" ]; then
-	targetPath="$1"
-else
-	targetPath="."	
-fi
 
 
-for oldBak in $(find $1 -name "*.tar.bz2")
+for oldBak in $(find $targetPath -name "*.tar.bz2")
 do
 	moduleName=$(echo "$oldBak" | gawk 'match($0, /-[A-Za-z]{3,3}-(.*.tar.bz2$)/, a) {print a[1]}')
 	find $1 -name "*$moduleName" | sort -gr | tail --lines=+2 | xargs rm -f
@@ -42,7 +33,7 @@ done
 
 for tarball in $(find /var/www/faims/modules -name "*.tar.bz2")
 do
-	if [ -z "$2" ]; then
+	if [ -z "$2" ] && [ "$2" != "--" ]; then
 		maxDate=$(tar -jtvf $tarball | awk '\
 	BEGIN {FS=" "; \
 		   maxDate="1970-01-01"; } \
@@ -61,6 +52,11 @@ do
 	tarFullName=$(date --date="$maxDate" "+FAIMS2ModuleBackup-%Y%m%d-D%j-%a-$tarballName")
 	
 	echo "rsync -az $tarball $targetPath/$tarFullName" | bash
+
+	if [ ! -z "$3" ]; then
+		echo "rsync -az $tarball $3/$tarFullName" | bash
+	fi
+
 	echo "Backed up $tarballName from $maxDate."	
 
 done	
