@@ -33,7 +33,7 @@ done
 
 for tarball in $(find /var/www/faims/modules -name "*.tar.bz2")
 do
-	if [ -z "$2" ] && [ "$2" != "--" ]; then
+	if [ -z "$2" ] || [ "$2" == "--" ]; then
 		maxDate=$(tar -jtvf $tarball | awk '\
 	BEGIN {FS=" "; \
 		   maxDate="1970-01-01"; } \
@@ -54,7 +54,7 @@ do
 	echo "rsync -az $tarball $targetPath/$tarFullName" | bash
 
 	if [ ! -z "$3" ]; then
-		echo "rsync -az $tarball $3/$tarFullName" | bash
+		echo "scp -q $tarball $3/$tarFullName" | bash
 	fi
 
 	echo "Backed up $tarballName from $maxDate."	
